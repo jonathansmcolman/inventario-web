@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Inventario - Empresa Jordán</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    input, button { margin: 5px 5px 10px 0; padding: 5px; }
+    table { width: 100%; margin-top: 20px; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 10px; text-align: center; }
+    h2 { margin-top: 40px; }
+  </style>
+</head>
+<body>
+
+  <h1>Gestión de Inventario - Empresa Jordán</h1>
+
+  <!-- Cargar producto -->
+  <h2>Cargar Producto</h2>
+  <input type="text" id="codigo" placeholder="Código (ingresar el codigo del producto)" />
+  <input type="number" id="cantidad" placeholder="Cantidad" />
+  <input type="text" id="monto" placeholder="Monto (ingresar mopnto)" />
+  <button onclick="agregarProducto()">Agregar Producto</button>
+
+  <!-- Vender producto -->
+  <h2>Vender Producto</h2>
+  <input type="text" id="ventaCodigo" placeholder="Código del Producto" />
+  <input type="number" id="ventaCantidad" placeholder="Cantidad a vender" />
+  <button onclick="venderProducto()">Vender</button>
+
+  <!-- Buscar producto -->
+  <h2>Buscar Producto por Código</h2>
+  <input type="text" id="buscarCodigo" placeholder="Código a buscar" />
+  <button onclick="buscarProducto()">Buscar</button>
+  <div id="resultadoBusqueda"></div>
+
+
+  <!-- Inventario -->
+  <h2>Inventario Actual</h2>
+  <table id="tablaProductos">
+    <thead>
+      <tr>
+        <th>Código</th>
+        <th>Cantidad</th>
+        <th>Monto (Precio)</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+  <button onclick="limpiarInventario()">🗑 Borrar Todo el Inventario</button>
+
+  <script>
+    let productos = JSON.parse(localStorage.getItem('productos')) || {};
+
+    function guardarEnLocalStorage() {
+      localStorage.setItem('productos', JSON.stringify(productos));
+    }
+
+    function actualizarTabla() {
+      const tbody = document.querySelector("#tablaProductos tbody");
+      tbody.innerHTML = "";
+
+      for (let codigo in productos) {
+        const producto = productos[codigo];
+        const cantidad = typeof producto.cantidad === 'number' ? producto.cantidad : 0;
+        const monto = producto.monto !== undefined ? producto.monto : "No especificado";
+
+        const fila = `<tr>
+                        <td>${codigo}</td>
+                        <td>${cantidad}</td>
+                        <td>${monto}</td>
+                      </tr>`;
+        tbody.innerHTML += fila;
+      }
+    }
+
+    function agregarProducto() {
+      const codigo = document.getElementById("codigo").value.toUpperCase().trim();
+      const cantidad = parseInt(document.getElementById("cantidad").value);
+      const monto = document.getElementById("monto").value.trim();
+
+      if (!codigo || isNaN(cantidad) || cantidad <= 0 || !monto) {
+        alert("Ingresa un código, cantidad válida y monto.");
+        return;
+      }
+
+      if (!productos[codigo]) {
+        productos[codigo] = { cantidad: 0, monto: monto };
+      }
+
+      productos[codigo].cantidad += cantidad;
+      productos[codigo].monto = monto;
+
+      guardarEnLocalStorage();
+      actualizarTabla();
+
+      document.getElementById("codigo").value = "";
+      document.getElementById("cantidad").value = "";
+      document.getElementById("monto").value = "";
+    }
+
+    function venderProducto() {
+      const codigo = document.getElementById("ventaCodigo").value.toUpperCase().trim();
+      const cantidadVenta = parseInt(document.getElementById("ventaCantidad").value);
+
+      if (!productos[codigo]) {
+        alert("El producto no existe.");
+        return;
+      }
+
+      if (isNaN(cantidadVenta) || cantidadVenta <= 0) {
+        alert("Cantidad inválida.");
+        return;
+      }
+
+      if (productos[codigo].cantidad < cantidadVenta) {
+        alert("Stock insuficiente.");
+        return;
+      }
+
+      productos[codigo].cantidad -= cantidadVenta;
+      if (productos[codigo].cantidad === 0) {
+        delete productos[codigo];
+      }
+
+      guardarEnLocalStorage();
+      actualizarTabla();
+
+      document.getElementById("ventaCodigo").value = "";
+      document.getElementById("ventaCantidad").value = "";
+    }
+
+    function buscarProducto() {
+      const codigo = document.getElementById("buscarCodigo").value.toUpperCase().trim();
+      const resultadoDiv = document.getElementById("resultadoBusqueda");
+
+      if (!codigo) {
+        resultadoDiv.innerHTML = "<p>Ingrese un código para buscar.</p>";
+        return;
+      }
+
+      if (!productos[codigo]) {
+        resultadoDiv.innerHTML = `<p>Producto con código <strong>${codigo}</strong> no encontrado.</p>`;
+        return;
+      }
+
+      const producto = productos[codigo];
+      resultadoDiv.innerHTML = `
+        <p><strong>Resultado:</strong></p>
+        <ul>
+          <li><strong>Código:</strong> ${codigo}</li>
+          <li><strong>Cantidad:</strong> ${producto.cantidad}</li>
+          <li><strong>Monto:</strong> ${producto.monto}</li>
+        </ul>
+      `;
+    }
+
+    function editarProducto() {
+      const codigo = document.getElementById("editarCodigo").value.toUpperCase().trim();
+      const nuevaCantidad = parseInt(document.getElementById("editarCantidad").value);
+      const nuevoMonto = document.getElementById("editarMonto").value.trim();
+
+      if (!productos[codigo]) {
+        alert("El producto no existe.");
+        return;
+      }
+
+      if (isNaN(nuevaCantidad) || nuevaCantidad < 0 || !nuevoMonto) {
+        alert("Ingresa una cantidad válida y un monto.");
+        return;
+      }
+
+      productos[codigo].cantidad = nuevaCantidad;
+      productos[codigo].monto = nuevoMonto;
+
+      guardarEnLocalStorage();
+      actualizarTabla();
+
+      document.getElementById("editarCodigo").value = "";
+      document.getElementById("editarCantidad").value = "";
+      document.getElementById("editarMonto").value = "";
+
+      alert("Producto actualizado correctamente.");
+    }
+
+    function limpiarInventario() {
+      if (confirm("¿Estás seguro de que quieres borrar todo el inventario?")) {
+        productos = {};
+        guardarEnLocalStorage();
+        actualizarTabla();
+        document.getElementById("resultadoBusqueda").innerHTML = "";
+        alert("Inventario borrado.");
+      }
+    }
+
+    // Inicializar tabla al cargar
+    actualizarTabla();
+  </script>
+
+</body>
+</html>
